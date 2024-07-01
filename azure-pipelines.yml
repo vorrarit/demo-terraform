@@ -16,32 +16,35 @@ stages:
   - job: TerraformPlan
     displayName: 'Terraform Plan'
     steps:
-    - task: TerraformInstaller@0
-      inputs:
-        terraformVersion: 'latest'
-
     - script: |
         terraform --version
-        terraform init -backend-config="storage_account_name=$(storageAccountName)" -backend-config="container_name=$(containerName)" -backend-config="key=$(key)" -backend-config="access_key=$(accessKey)"
+        terraform init
         terraform plan -out=tfplan
       displayName: 'Terraform Init and Plan'
       env:
-        HW_ACCESS_KEY: $(HW_ACCESS_KEY)
-        HW_REGION_NAME: $(HW_REGION_NAME)
-        HW_SECRET_KEY: $(HW_SECRET_KEY)
-
+        TF_TOKEN_app_terraform_io: $(tfToken)
+        HW_ACCESS_KEY: $(accessKey)
+        HW_SECRET_KEY: $(secretKey)
+        HW_REGION_NAME: $(region)
+    - publish: $(System.DefaultWorkingDirectory)/tfplan  # Publish the plan file
+      artifact: tfplan
 - stage: Deploy
   displayName: 'Terraform Apply'
+  dependsOn: Plan
+  condition: succeeded()
   jobs:
   - job: TerraformApply
     displayName: 'Terraform Apply'
     steps:
-    - task: TerraformInstaller@0
-      inputs:
-        terraformVersion: 'latest'
-
+    - download: current
+      artifact: tfplan  # Download the plan file published earlier
     - script: |
         terraform --version
-        terraform init -backend-config="storage_account_name=$(storageAccountName)" -backend-config="container_name=$(containerName)" -backend-config="key=$(key)" -backend-config="access_key=$(accessKey)"
-        terraform apply -auto-approve tfplan
+        terraform init
+        terraform apply $(Pipeline.Workspace)/tfplan/tfplan
       displayName: 'Terraform Init and Apply'
+      env:
+        TF_TOKEN_app_terraform_io: $(tfToken)
+        HW_ACCESS_KEY: $(accessKey)
+        HW_SECRET_KEY: $(secretKey)
+        HW_REGION_NAME: $(region)
