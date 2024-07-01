@@ -25,6 +25,10 @@ stages:
         terraform init -backend-config="storage_account_name=$(storageAccountName)" -backend-config="container_name=$(containerName)" -backend-config="key=$(key)" -backend-config="access_key=$(accessKey)"
         terraform plan -out=tfplan
       displayName: 'Terraform Init and Plan'
+      env:
+        HW_ACCESS_KEY: $(HW_ACCESS_KEY)
+        HW_REGION_NAME: $(HW_REGION_NAME)
+        HW_SECRET_KEY: $(HW_SECRET_KEY)
 
 - stage: Deploy
   displayName: 'Terraform Apply'
